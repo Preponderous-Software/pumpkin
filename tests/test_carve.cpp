@@ -148,10 +148,10 @@ int main() {
         Editor f;
         f.setVariety(GreenSquat);
         f.addStamp(GrinMouth);
-        const Stamp m = *f.selectedStamp();
-        CHECK(m.at.y > -0.38f);
+        const Stamp grin = *f.selectedStamp();
+        CHECK(grin.at.y > -0.38f);
         Vec3 q;
-        CHECK(frontPoint(GreenSquat, 0, m.at.y - 0.6f * m.scale, q));
+        CHECK(frontPoint(GreenSquat, 0, grin.at.y - 0.6f * grin.scale, q));
     }
     // Meshes are well formed.
     for (int v = 0; v < VarietyCount; ++v) {
