@@ -28,7 +28,10 @@ engine.
 | --- | --- |
 | ![Two triangle eyes, a toothy grin and a freehand hole in the cheek, in daylight](docs/media/carving.png) | ![The same pumpkin lit by its candle on an iPhone-sized screen](docs/media/phone.png) |
 
-The pictures are from the smoke test in CI (headless Chromium, software rendering).
+![Five carved pumpkins, orange, white, tall, green and squat, lit on the porch at night](docs/media/porch.png)
+
+The pictures are from the toy itself in headless Chromium (software rendering): the first three from the
+smoke test in CI, the porch from the live site.
 
 ## How it works
 

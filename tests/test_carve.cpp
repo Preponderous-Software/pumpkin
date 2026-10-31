@@ -143,6 +143,16 @@ int main() {
         CHECK(t.glow[skin + 3] == 0);
         CHECK(t.skin[hole] < t.skin[skin]);
     }
+    // On a squat pumpkin the mouth goes higher, and is still on its face.
+    {
+        Editor f;
+        f.setVariety(GreenSquat);
+        f.addStamp(GrinMouth);
+        const Stamp m = *f.selectedStamp();
+        CHECK(m.at.y > -0.38f);
+        Vec3 q;
+        CHECK(frontPoint(GreenSquat, 0, m.at.y - 0.6f * m.scale, q));
+    }
     // Meshes are well formed.
     for (int v = 0; v < VarietyCount; ++v) {
         for (const MeshData& md : {buildBody(static_cast<Variety>(v), 96, 48), buildStem(static_cast<Variety>(v))}) {
