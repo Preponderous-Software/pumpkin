@@ -6,7 +6,7 @@ engine.
 
 **Play it:** https://pumpkin.play.danielstephenson.dev (desktop and phone; needs WebGL 2)
 
-![A carved pumpkin lit by its candle](docs/media/lit.png)
+![A carved pumpkin lit by its candle, as the toy's Save a picture button saves it](docs/media/lit.png)
 
 ## What you can do
 
@@ -24,7 +24,11 @@ engine.
 - **Save a picture** of the lit pumpkin as a PNG.
 - **Pick a pumpkin:** round, tall, white, green or squat.
 
-![Pumpkins lined up on the porch at night](docs/media/porch.png)
+| Carving, lights on | On a phone, lights off |
+| --- | --- |
+| ![Two triangle eyes, a toothy grin and a freehand hole in the cheek, in daylight](docs/media/carving.png) | ![The same pumpkin lit by its candle on an iPhone-sized screen](docs/media/phone.png) |
+
+The pictures are from the smoke test in CI (headless Chromium, software rendering).
 
 ## How it works
 
