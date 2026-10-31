@@ -161,12 +161,15 @@
     toastTimer = setTimeout(function () { t.classList.remove('on'); }, 1800);
   }
 
-  // ---- drawing size: the stage in CSS pixels, times the device pixel ratio capped at 2
+  // ---- drawing size: the stage in CSS pixels times the device pixel ratio,
+  // capped at 2. SDL applies the ratio itself, so pass the CSS size scaled
+  // down where the ratio is over 2; the engine reports what it drew.
   function sizeCanvas() {
     if (!ready) return;
     var st = $('stage');
-    var dpr = Math.min(2, window.devicePixelRatio || 1);
-    var w = Math.max(1, Math.round(st.clientWidth * dpr)), h = Math.max(1, Math.round(st.clientHeight * dpr));
+    var dpr = window.devicePixelRatio || 1;
+    var k = dpr > 2 ? 2 / dpr : 1;
+    var w = Math.max(1, Math.round(st.clientWidth * k)), h = Math.max(1, Math.round(st.clientHeight * k));
     call.layout(w, h, 0, 0);
   }
   function toDrawable(e) {

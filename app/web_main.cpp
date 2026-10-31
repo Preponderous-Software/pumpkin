@@ -205,7 +205,7 @@ void pointerUp(int id, bool cancel) {
 
 extern "C" {
 
-// kind: 0 down, 1 move, 2 up, 3 cancel. x, y in drawable pixels.
+// kind: 0 down, 1 move, 2 up, 3 cancel. x, y in drawable pixels (the canvas's own).
 EMSCRIPTEN_KEEPALIVE void pumpkin_pointer(int kind, int id, double x, double y) {
     if (!app) return;
     const float fx = static_cast<float>(x), fy = static_cast<float>(y);
@@ -233,8 +233,13 @@ EMSCRIPTEN_KEEPALIVE void pumpkin_dark(int on) {
 }
 EMSCRIPTEN_KEEPALIVE void pumpkin_layout(double w, double h, double top, double bottom) {
     if (!app || w < 1 || h < 1) return;
+    // SDL scales by the device pixel ratio itself: frame the view in the
+    // drawable's real size, which is also the canvas's.
     app->engine->resize(static_cast<int32_t>(w), static_cast<int32_t>(h));
-    app->view->setLayout(static_cast<int>(w), static_cast<int>(h), static_cast<float>(top), static_cast<float>(bottom));
+    int32_t dw = 0, dh = 0;
+    app->engine->drawableSize(dw, dh);
+    if (dw < 1 || dh < 1) { dw = static_cast<int32_t>(w); dh = static_cast<int32_t>(h); }
+    app->view->setLayout(dw, dh, static_cast<float>(top), static_cast<float>(bottom));
 }
 EMSCRIPTEN_KEEPALIVE void pumpkin_mode(int porch) {
     if (!app) return;
