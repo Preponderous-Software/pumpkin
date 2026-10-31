@@ -468,8 +468,7 @@
       buildKinds();
       wire();
       sizeCanvas();
-      refresh();
-      loadHash();
+      loadHash();  // before the first refresh, which writes the address
       refresh();
       StrataBoot.ready();
     },

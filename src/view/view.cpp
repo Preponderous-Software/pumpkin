@@ -126,7 +126,7 @@ void View::build(Gfx& g, const Carving& c, int texW, int texH) {
         const float col[4] = {levels[i], levels[i], levels[i], 1};
         g.glow[static_cast<size_t>(i)] = addMesh(engine_, shell, g.glowTex, STRATA_MESH_UNLIT | STRATA_MESH_TRANSLUCENT, col);
     }
-    const float day[4] = {1, 0.9f, 0.7f, 0.5f};
+    const float day[4] = {1, 0.85f, 0.6f, 0.22f};
     g.glow[4] = addMesh(engine_, shell, g.glowTex, STRATA_MESH_UNLIT | STRATA_MESH_TRANSLUCENT, day);
     g.live = true;
 }
