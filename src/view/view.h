@@ -18,7 +18,7 @@ public:
     explicit View(strata::Engine& engine);
 
     enum class Mode { Carve, Porch };
-    void setMode(Mode m) { mode_ = m; }
+    void setMode(Mode m) { mode_ = m; placeAll(time_); }
     Mode mode() const { return mode_; }
     void setDark(bool dark) { dark_ = dark; }
     bool dark() const { return dark_; }
@@ -66,6 +66,9 @@ private:
     void build(Gfx& g, const Carving& c, int texW, int texH);
     void destroy(Gfx& g);
     void place(Gfx& g, bool shown, int level, bool dayGlow);
+    // Puts every pumpkin where this mode shows it (or out of sight), so a
+    // ray cast is right before the next frame is drawn.
+    void placeAll(double t);
     void camera(float& tanHalf, float eye[3], float target[3]) const;
     void drawScene(double t, bool overlays);
     void ray(float px, float py, float origin[3], float dir[3]) const;

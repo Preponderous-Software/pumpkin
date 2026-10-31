@@ -146,10 +146,20 @@ void View::place(Gfx& g, bool shown, int level, bool dayGlow) {
     }
 }
 
+void View::placeAll(double t) {
+    // Pumpkins: the carving's in carve mode, the porch's otherwise.
+    const bool carve = mode_ == Mode::Carve;
+    carve_.scale = 1;
+    place(carve_, carve, candleLevel(candle(t, 0)), !dark_);
+    for (size_t i = 0; i < porch_.size(); ++i)
+        place(porch_[i], !carve, candleLevel(candle(t, 1.7f * static_cast<float>(i))), !dark_);
+}
+
 void View::showCarving(const Carving& c, unsigned revision) {
     if (carve_.live && revision == carveRevision_) return;
     carveRevision_ = revision;
     build(carve_, c, 1024, 512);
+    placeAll(time_);
 }
 
 void View::setPorch(const std::vector<Carving>& pumpkins) {
@@ -164,6 +174,7 @@ void View::setPorch(const std::vector<Carving>& pumpkins) {
         g.scale = kPorchScale;
     }
     porchChosen_ = -1;
+    placeAll(time_);
 }
 
 void View::camera(float& tanHalf, float eye[3], float target[3]) const {
@@ -308,11 +319,7 @@ void View::drawScene(double t, bool overlays) {
     }
     engine_.setPointLights(lights.data(), lights.size());
 
-    // Pumpkins: the carving's in carve mode, the porch's otherwise.
-    carve_.scale = 1;
-    place(carve_, carve, candleLevel(f0), !dark_);
-    for (size_t i = 0; i < porch_.size(); ++i)
-        place(porch_[i], !carve, candleLevel(candle(t, 1.7f * static_cast<float>(i))), !dark_);
+    placeAll(t);
     {
         float m[16];
         const float at[3] = {-2.6f, ground + 2.0f, -3.335f};
