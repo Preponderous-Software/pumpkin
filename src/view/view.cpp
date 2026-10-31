@@ -173,8 +173,9 @@ void View::camera(float& tanHalf, float eye[3], float target[3]) const {
         halfW = 1.3f; halfH = 1.08f; cy = 0.12f; dist = 4.6f;
     } else {
         const bool twoRows = porch_.size() > static_cast<size_t>(kPorchRow);
-        const int across = std::max(3, std::min(static_cast<int>(porch_.size()), kPorchRow));
-        halfW = 0.65f * static_cast<float>(across) + 0.25f; halfH = twoRows ? 1.25f : 0.9f; cy = twoRows ? 0.0f : 0.3f; dist = 8.5f;
+        const int across = std::max(2, std::min(static_cast<int>(porch_.size()), kPorchRow));
+        halfW = 0.65f * static_cast<float>(across) + 0.25f; halfH = twoRows ? 1.25f : 0.75f; cy = twoRows ? 0.0f : 0.35f;
+        dist = twoRows ? 8.5f : 6.0f;
     }
     const float aspect = static_cast<float>(width_) / static_cast<float>(height_);
     const float free = std::max(0.3f, (static_cast<float>(height_) - coverTop_ - coverBottom_) / static_cast<float>(height_));
@@ -272,7 +273,7 @@ void View::drawScene(double t, bool overlays) {
     engine_.setCamera(strata::cameraLookAt(eye, target, up, fovDeg, aspect, 0.1f, 80.0f));
 
     StrataLighting light = strata::lightingDefaults(STRATA_LIGHTING_SPACE);
-    light.legacy_ambient = dark_ ? 0.05f : 0.42f;
+    light.legacy_ambient = dark_ ? (mode_ == Mode::Porch ? 0.09f : 0.05f) : 0.42f;
     engine_.setLighting(light);
 
     const bool carve = mode_ == Mode::Carve;
