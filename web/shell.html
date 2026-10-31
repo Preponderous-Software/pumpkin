@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Pumpkin</title>
+<meta name="description" content="Pumpkin: carve a jack-o'-lantern in your browser, light the candle, and line the family's pumpkins up on the porch. On the Strata engine.">
+<style>
+  :root {
+    --bg: #120b14; --panel: rgba(28, 16, 26, 0.94); --line: #4a2f3c; --text: #fbefe0; --dim: #c9b3aa;
+    --lamp: #ff8a1e; --btn: #2c1a28; --btn-on: #6a3410; --pick: #8ef0ff;
+    --sk-loader-bg: var(--bg); --sk-loader-fg: var(--text); --sk-loader-panel: var(--panel); --sk-loader-accent: var(--lamp);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.3 system-ui, -apple-system, "Segoe UI", sans-serif; overflow: hidden;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+  body { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+  #stage { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+  canvas#canvas { display: block; width: 100%; height: 100%; touch-action: none; outline: none; background: #000; }
+  .bar { flex: 0 0 auto; display: flex; gap: 6px; align-items: center; background: var(--panel); z-index: 2;
+    padding: 6px max(8px, env(safe-area-inset-right)) 6px max(8px, env(safe-area-inset-left)); }
+  #top { border-bottom: 1px solid var(--line); padding-top: max(6px, env(safe-area-inset-top)); }
+  #top .brand { font-weight: 800; letter-spacing: 0.02em; margin-right: auto; white-space: nowrap; }
+  #top .brand a { color: var(--lamp); text-decoration: none; }
+  #bottom { border-top: 1px solid var(--line); padding-bottom: max(6px, env(safe-area-inset-bottom)); min-height: 76px; }
+  button { font: inherit; color: var(--text); background: var(--btn); border: 2px solid var(--line); border-radius: 14px;
+    min-width: 52px; min-height: 52px; padding: 0 8px; cursor: pointer; touch-action: manipulation; flex: 0 0 auto;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+  button .ico { font-size: 26px; line-height: 1; }
+  button svg { width: 34px; height: 34px; display: block; }
+  button:active { filter: brightness(1.4); }
+  button:disabled { opacity: 0.35; }
+  button[aria-pressed="true"] { background: var(--btn-on); border-color: var(--lamp); }
+  button:focus-visible { outline: 3px solid var(--lamp); }
+  .row { display: none; gap: 8px; align-items: center; width: 100%; overflow-x: auto; overflow-y: hidden;
+    scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .row::-webkit-scrollbar { display: none; }
+  .row.on { display: flex; }
+  .gap { flex: 0 0 10px; }
+  #tray button { background: #3a2216; border-color: #6b3b1c; }
+  #tray button svg path { fill: #170a06; stroke: #ffcf7a; stroke-width: 3; }
+  #edits button.wide, #porchBar button.wide { padding: 0 14px; font-weight: 700; }
+  #edits #doneBtn { background: #1f4a2a; border-color: #4fbf6a; margin-left: auto; }
+  .word { font-size: 15px; }
+  /* A phone: the name gives way to the buttons, which share the top bar. */
+  @media (max-width: 560px) { .word { display: none; } #top .brand { display: none; } #top { gap: 4px; }
+    button { min-width: 48px; min-height: 48px; padding: 0 6px; }
+    #top button { flex: 1 1 0; min-width: 44px; max-width: 64px; padding: 0 2px; }
+    #top button:first-of-type { margin-left: auto; } }
+  @media (max-width: 360px) { #top { gap: 2px; padding-left: 4px; padding-right: 4px; } #top button { min-width: 40px; }
+    button .ico { font-size: 22px; } }
+  #hint { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); z-index: 1; pointer-events: none;
+    background: rgba(28, 16, 26, 0.8); border: 1px solid var(--line); border-radius: 20px; padding: 8px 14px;
+    font-size: 16px; display: none; width: max-content; max-width: calc(100% - 24px); text-align: center; }
+  #toast { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 3; pointer-events: none;
+    background: rgba(28, 16, 26, 0.92); border: 2px solid var(--lamp); border-radius: 20px; padding: 10px 18px;
+    font-size: 17px; font-weight: 700; white-space: nowrap; opacity: 0; transition: opacity 0.25s; }
+  #toast.on { opacity: 1; }
+  .dialog { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); background: rgba(28, 16, 26, 0.98);
+    border: 2px solid var(--line); border-radius: 18px; padding: 18px; z-index: 4; width: min(92vw, 380px);
+    display: none; text-align: center; }
+  .dialog .big { font-size: 46px; line-height: 1.1; }
+  .dialog .choices { display: flex; gap: 14px; justify-content: center; margin-top: 14px; }
+  .dialog .choices button { min-width: 96px; min-height: 64px; font-size: 18px; font-weight: 700; }
+  #kinds { flex-wrap: wrap; justify-content: center; }
+  #kinds button { min-width: 72px; min-height: 72px; }
+  #kinds svg { width: 52px; height: 52px; }
+  #shareBox input { width: 100%; font: inherit; padding: 8px; border-radius: 8px; border: 1px solid var(--line);
+    background: #1a0f18; color: var(--text); -webkit-user-select: text; user-select: text; margin-top: 10px; }
+  .dim { color: var(--dim); font-size: 13px; }
+  a { color: var(--lamp); }
+  #loading { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 3; display: none;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; max-width: 90vw; text-align: center; }
+</style>
+</head>
+<body>
+<div id="top" class="bar">
+  <span class="brand"><a href="https://danielstephenson.dev/play" target="_top" title="More games">Pumpkin</a></span>
+  <button id="kindBtn" title="Pick a pumpkin" aria-label="Pick a pumpkin"><span class="ico">&#127875;</span></button>
+  <button id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo"><span class="ico">&#8630;</span></button>
+  <button id="clearBtn" title="Start over" aria-label="Start over"><span class="ico">&#10024;</span></button>
+  <button id="lightBtn" title="Lights off: light the candle" aria-label="Lights off" aria-pressed="false"><span class="ico">&#128367;&#65039;</span></button>
+  <button id="photoBtn" title="Save a picture" aria-label="Save a picture"><span class="ico">&#128247;</span></button>
+  <button id="shareBtn" title="Share a link" aria-label="Share a link"><span class="ico">&#128279;</span></button>
+  <button id="porchBtn" title="Put it on the porch" aria-label="Put it on the porch"><span class="ico">&#127969;</span></button>
+</div>
+
+<div id="stage">
+  <canvas id="canvas" tabindex="-1" oncontextmenu="event.preventDefault()"></canvas>
+  <div id="hint">&#9999;&#65039; Draw on the pumpkin to cut it, or tap a face below</div>
+  <div id="toast"></div>
+</div>
+
+<div id="bottom" class="bar">
+  <div id="tray" class="row on" role="group" aria-label="Face pieces"></div>
+  <div id="edits" class="row" role="group" aria-label="Change this piece">
+    <button data-edit="1" title="Smaller" aria-label="Smaller"><span class="ico">&#10134;</span></button>
+    <button data-edit="0" title="Bigger" aria-label="Bigger"><span class="ico">&#10133;</span></button>
+    <button data-edit="2" title="Turn left" aria-label="Turn left"><span class="ico">&#8634;</span></button>
+    <button data-edit="3" title="Turn right" aria-label="Turn right"><span class="ico">&#8635;</span></button>
+    <button data-edit="4" title="Flip" aria-label="Flip"><span class="ico">&#8644;</span></button>
+    <button data-edit="5" title="Copy to the other side" aria-label="Copy to the other side"><span class="ico">&#10063;</span></button>
+    <button data-edit="6" title="Take it away" aria-label="Take it away"><span class="ico">&#128465;&#65039;</span></button>
+    <button id="doneBtn" data-edit="7" class="wide" title="Done" aria-label="Done"><span class="ico">&#10004;&#65039;</span></button>
+  </div>
+  <div id="porchBar" class="row" role="group" aria-label="The porch">
+    <button id="backBtn" class="wide" title="Back to carving" aria-label="Back to carving"><span class="ico">&#11013;&#65039;</span><span class="word">Carve</span></button>
+    <button id="newBtn" class="wide" title="A new pumpkin" aria-label="A new pumpkin"><span class="ico">&#10133;&#127875;</span><span class="word">New</span></button>
+    <span class="gap" style="margin-left:auto"></span>
+    <button id="openBtn" class="wide" title="Carve this one" aria-label="Carve this one" disabled><span class="ico">&#9999;&#65039;</span><span class="word">Open</span></button>
+    <button id="removeBtn" class="wide" title="Take it off the porch" aria-label="Take it off the porch" disabled><span class="ico">&#128465;&#65039;</span></button>
+  </div>
+</div>
+
+<div id="clearAsk" class="dialog" role="dialog" aria-label="Start over?">
+  <div class="big">&#10024;&#127875;</div>
+  <div>Start over with a fresh pumpkin?</div>
+  <div class="choices"><button id="clearYes" aria-label="Yes, start over">&#10004;&#65039;</button><button id="clearNo" aria-label="No, keep it">&#10006;&#65039;</button></div>
+</div>
+<div id="removeAsk" class="dialog" role="dialog" aria-label="Take it off the porch?">
+  <div class="big">&#128465;&#65039;&#127875;</div>
+  <div>Take this pumpkin off the porch?</div>
+  <div class="choices"><button id="removeYes" aria-label="Yes, take it away">&#10004;&#65039;</button><button id="removeNo" aria-label="No, keep it">&#10006;&#65039;</button></div>
+</div>
+<div id="kindAsk" class="dialog" role="dialog" aria-label="Pick a pumpkin">
+  <div class="choices" id="kinds"></div>
+  <div class="choices"><button id="kindNo" aria-label="Close">&#10006;&#65039;</button></div>
+</div>
+<div id="shareBox" class="dialog" role="dialog" aria-label="Share a link">
+  <div class="big">&#128279;</div>
+  <div>Send this link: it opens your pumpkin.</div>
+  <input id="shareUrl" readonly>
+  <div class="choices"><button id="shareCopy" aria-label="Copy">Copy</button><button id="shareClose" aria-label="Close">&#10006;&#65039;</button></div>
+</div>
+<div id="loading"></div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var canvas = $('canvas');
+  var ready = false, call = {}, status = {}, lastRevision = -1, lastSelected = -2;
+  var PORCH_KEY = 'pumpkin-porch-v1', PORCH_MAX = 10;
+  var editingSlot = -1, porchChosen = -1, mode = 'carve', darkBeforePorch = false;
+
+  function api(name, ret, args) { return Module.cwrap(name, ret, args || []); }
+
+  // ---- the porch, kept in this browser
+  function porchList() {
+    try {
+      var v = JSON.parse(localStorage.getItem(PORCH_KEY) || '[]');
+      return Array.isArray(v) ? v.filter(function (c) { return typeof c === 'string' && /^[A-Za-z0-9_-]+$/.test(c); }) : [];
+    } catch (e) { return []; }
+  }
+  function porchStore(list) {
+    try { localStorage.setItem(PORCH_KEY, JSON.stringify(list)); return true; } catch (e) { return false; }
+  }
+
+  var toastTimer = null;
+  function toast(text) {
+    var t = $('toast');
+    t.textContent = text;
+    t.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('on'); }, 1800);
+  }
+
+  // ---- drawing size: the stage in CSS pixels times the device pixel ratio,
+  // capped at 2. SDL applies the ratio itself, so pass the CSS size scaled
+  // down where the ratio is over 2; the engine reports what it drew.
+  function sizeCanvas() {
+    if (!ready) return;
+    var st = $('stage');
+    var dpr = window.devicePixelRatio || 1;
+    var k = dpr > 2 ? 2 / dpr : 1;
+    var w = Math.max(1, Math.round(st.clientWidth * k)), h = Math.max(1, Math.round(st.clientHeight * k));
+    call.layout(w, h, 0, 0);
+  }
+  function toDrawable(e) {
+    var r = canvas.getBoundingClientRect();
+    var sx = canvas.width / (r.width || 1), sy = canvas.height / (r.height || 1);
+    return [(e.clientX - r.left) * sx, (e.clientY - r.top) * sy];
+  }
+
+  function link() {
+    var code = call.code();
+    return location.href.split('#')[0] + '#p=' + code;
+  }
+  function blank(s) { return s.ops === 0 && s.variety === 0; }
+
+  function refresh() {
+    if (!ready) return;
+    try { status = JSON.parse(call.status()); } catch (e) { return; }
+    window.pumpkinStatus = status;
+    if (status.revision !== lastRevision) {
+      lastRevision = status.revision;
+      // The carving lives in the link: share it by copying the address.
+      try {
+        if (mode === 'carve') history.replaceState(null, '', blank(status) ? location.pathname + location.search : '#p=' + call.code());
+      } catch (e) {}
+    }
+    $('undoBtn').disabled = !status.canUndo || mode !== 'carve';
+    $('clearBtn').disabled = status.ops === 0 || mode !== 'carve';
+    ['kindBtn', 'photoBtn', 'shareBtn'].forEach(function (id) { $(id).disabled = mode !== 'carve'; });
+    $('lightBtn').setAttribute('aria-pressed', String(status.dark));
+    var editing = mode === 'carve' && status.selected >= 0;
+    $('tray').classList.toggle('on', mode === 'carve' && !editing);
+    $('edits').classList.toggle('on', editing);
+    $('porchBar').classList.toggle('on', mode === 'porch');
+    $('openBtn').disabled = $('removeBtn').disabled = porchChosen < 0;
+    var hint = mode === 'carve' && status.ops === 0 && !status.cutting;
+    $('hint').style.display = hint ? 'block' : 'none';
+  }
+
+  function setDark(on) { call.dark(on ? 1 : 0); refresh(); }
+
+  function showPorch(choose) {
+    var list = porchList();
+    mode = 'porch';
+    call.porch(list.join(','));
+    porchChosen = typeof choose === 'number' && choose < list.length ? choose : -1;
+    call.porchChoose(porchChosen);
+    darkBeforePorch = status.dark;
+    call.mode(1);
+    setDark(true);
+    if (!list.length) toast('The porch is empty');
+  }
+  function showCarve() {
+    mode = 'carve';
+    porchChosen = -1;
+    call.mode(0);
+    setDark(darkBeforePorch);
+    lastRevision = -1;
+    refresh();
+  }
+
+  function putOnPorch() {
+    var list = porchList();
+    var code = call.code();
+    if (status.ops === 0) { showPorch(); return; }
+    if (editingSlot >= 0 && editingSlot < list.length) list[editingSlot] = code;
+    else {
+      var at = list.indexOf(code);
+      if (at >= 0) editingSlot = at;
+      else if (list.length >= PORCH_MAX) { showPorch(); toast('The porch is full: take one away first'); return; }
+      else { list.push(code); editingSlot = list.length - 1; }
+    }
+    if (!porchStore(list)) { toast('This browser can\'t keep pumpkins'); return; }
+    showPorch(editingSlot);
+    toast('On the porch!');
+  }
+
+  function savePicture() {
+    var ptr = call.snapshot();
+    var w = call.shotW(), h = call.shotH();
+    if (!ptr || !w || !h) { toast('No picture this time'); return; }
+    var pixels = new Uint8ClampedArray((Module.HEAPU8 || window.HEAPU8).buffer, ptr, w * h * 4).slice();
+    var c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    c.getContext('2d').putImageData(new ImageData(pixels, w, h), 0, 0);
+    c.toBlob(function (blob) {
+      if (!blob) { toast('No picture this time'); return; }
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'pumpkin.png';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+      toast('Picture saved');
+    }, 'image/png');
+  }
+
+  function share() {
+    var url = link();
+    if (navigator.share && window.matchMedia && matchMedia('(pointer: coarse)').matches) {
+      navigator.share({ title: 'My pumpkin', url: url }).catch(function () {});
+      return;
+    }
+    $('shareUrl').value = url;
+    $('shareBox').style.display = 'block';
+  }
+
+  function shapeButton(i) {
+    var b = document.createElement('button');
+    var svg = '<svg viewBox="0 0 100 100" aria-hidden="true"><path d="' + call.shapeSvg(i) + '" fill-rule="evenodd"/></svg>';
+    b.innerHTML = svg;
+    b.dataset.shape = String(i);
+    var names = ['Triangle eye', 'Round eye', 'Happy eye', 'Cross eye', 'Star eye', 'Triangle nose', 'Heart nose',
+                 'Toothy grin', 'Smile', 'Zigzag mouth', 'Oh!', 'Fangs', 'Bat', 'Moon'];
+    b.title = names[i] || 'Face piece';
+    b.setAttribute('aria-label', b.title);
+    return b;
+  }
+
+  function buildTray() {
+    var tray = $('tray');
+    var n = call.shapeCount(), part = -1;
+    for (var i = 0; i < n; i++) {
+      var p = call.shapePart(i);
+      if (part >= 0 && p !== part) { var g = document.createElement('span'); g.className = 'gap'; tray.appendChild(g); }
+      part = p;
+      tray.appendChild(shapeButton(i));
+    }
+  }
+
+  var KIND_SVG = [
+    ['#ee6a0d', 1.0, 0.82], ['#f2760f', 0.86, 1.0], ['#e8e2d0', 1.0, 0.8], ['#667f33', 1.1, 0.66], ['#f5851a', 1.1, 0.68]
+  ];
+  function buildKinds() {
+    var box = $('kinds');
+    KIND_SVG.forEach(function (k, i) {
+      var b = document.createElement('button');
+      var rx = 40 * k[1] / 1.1, ry = 34 * k[2];
+      b.innerHTML = '<svg viewBox="0 0 100 100" aria-hidden="true"><ellipse cx="50" cy="56" rx="' + rx + '" ry="' + ry +
+        '" fill="' + k[0] + '"/><rect x="46" y="' + (56 - ry - 12) + '" width="8" height="16" rx="3" fill="#5a4a22"/></svg>';
+      b.setAttribute('aria-label', 'Pumpkin ' + (i + 1));
+      b.addEventListener('click', function () { call.variety(i); $('kindAsk').style.display = 'none'; refresh(); });
+      box.appendChild(b);
+    });
+  }
+
+  function anyDialog() {
+    return ['clearAsk', 'removeAsk', 'kindAsk', 'shareBox'].some(function (id) { return $(id).style.display === 'block'; });
+  }
+
+  function wire() {
+    var active = {};
+    canvas.addEventListener('pointerdown', function (e) {
+      if (anyDialog()) return;
+      e.preventDefault();
+      var p = toDrawable(e);
+      active[e.pointerId] = true;
+      if (canvas.setPointerCapture) { try { canvas.setPointerCapture(e.pointerId); } catch (x) {} }
+      call.pointer(0, e.pointerId, p[0], p[1]);
+      setTimeout(refresh, 30);
+    });
+    canvas.addEventListener('pointermove', function (e) {
+      if (!active[e.pointerId]) return;
+      var p = toDrawable(e);
+      call.pointer(1, e.pointerId, p[0], p[1]);
+    });
+    ['pointerup', 'pointercancel'].forEach(function (t) {
+      canvas.addEventListener(t, function (e) {
+        if (!active[e.pointerId]) return;
+        delete active[e.pointerId];
+        var p = toDrawable(e);
+        call.pointer(t === 'pointerup' ? 2 : 3, e.pointerId, p[0], p[1]);
+        setTimeout(refresh, 30);
+      });
+    });
+    canvas.addEventListener('wheel', function (e) {
+      if (mode !== 'carve' || status.selected < 0) return;
+      e.preventDefault();
+      call.edit(e.deltaY < 0 ? 0 : 1);
+    }, { passive: false });
+
+    $('tray').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-shape]');
+      if (!b) return;
+      call.stamp(Number(b.dataset.shape));
+      refresh();
+    });
+    document.querySelectorAll('[data-edit]').forEach(function (b) {
+      b.addEventListener('click', function () { call.edit(Number(b.dataset.edit)); refresh(); });
+    });
+    $('undoBtn').addEventListener('click', function () { call.undo(); refresh(); });
+    $('clearBtn').addEventListener('click', function () { $('clearAsk').style.display = 'block'; });
+    $('clearYes').addEventListener('click', function () {
+      $('clearAsk').style.display = 'none';
+      call.startOver();
+      refresh();
+    });
+    $('clearNo').addEventListener('click', function () { $('clearAsk').style.display = 'none'; });
+    $('lightBtn').addEventListener('click', function () { setDark(!status.dark); });
+    $('photoBtn').addEventListener('click', savePicture);
+    $('shareBtn').addEventListener('click', share);
+    $('shareCopy').addEventListener('click', function () {
+      var url = $('shareUrl').value;
+      var done = function () { toast('Link copied'); $('shareBox').style.display = 'none'; };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, function () { $('shareUrl').select(); });
+      else { $('shareUrl').select(); try { document.execCommand('copy'); done(); } catch (x) {} }
+    });
+    $('shareClose').addEventListener('click', function () { $('shareBox').style.display = 'none'; });
+    $('kindBtn').addEventListener('click', function () { $('kindAsk').style.display = 'block'; });
+    $('kindNo').addEventListener('click', function () { $('kindAsk').style.display = 'none'; });
+    $('porchBtn').addEventListener('click', function () {
+      if (mode === 'porch') { showCarve(); return; }
+      putOnPorch();
+    });
+    $('backBtn').addEventListener('click', showCarve);
+    $('newBtn').addEventListener('click', function () {
+      editingSlot = -1;
+      call.load('AQA');  // an empty orange pumpkin
+      showCarve();
+    });
+    $('openBtn').addEventListener('click', function () {
+      var list = porchList();
+      if (porchChosen < 0 || porchChosen >= list.length) return;
+      if (call.load(list[porchChosen])) { editingSlot = porchChosen; showCarve(); }
+    });
+    $('removeBtn').addEventListener('click', function () { if (porchChosen >= 0) $('removeAsk').style.display = 'block'; });
+    $('removeYes').addEventListener('click', function () {
+      $('removeAsk').style.display = 'none';
+      var list = porchList();
+      if (porchChosen < 0 || porchChosen >= list.length) return;
+      list.splice(porchChosen, 1);
+      porchStore(list);
+      if (editingSlot === porchChosen) editingSlot = -1;
+      else if (editingSlot > porchChosen) editingSlot--;
+      showPorch();
+    });
+    $('removeNo').addEventListener('click', function () { $('removeAsk').style.display = 'none'; });
+    window.addEventListener('keydown', function (e) {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); call.undo(); refresh(); }
+      else if (e.key === 'Escape' && status.selected >= 0) { call.edit(7); refresh(); }
+      else if ((e.key === 'Delete' || e.key === 'Backspace') && status.selected >= 0) { call.edit(6); refresh(); }
+    });
+    window.addEventListener('hashchange', function () { loadHash(); });
+    window.addEventListener('resize', sizeCanvas);
+    if (window.ResizeObserver) new ResizeObserver(sizeCanvas).observe($('stage'));
+    setInterval(refresh, 250);
+  }
+
+  function loadHash() {
+    var m = /[#&]p=([A-Za-z0-9_-]+)/.exec(location.hash);
+    if (!m) return false;
+    if (m[1] === call.code()) return true;
+    if (!call.load(m[1])) { toast('That link didn\'t have a pumpkin in it'); return false; }
+    editingSlot = -1;
+    if (mode !== 'carve') showCarve();
+    setDark(true);  // a shared pumpkin opens lit
+    return true;
+  }
+
+  window.Module = {
+    canvas: canvas,
+    print: function (t) { console.log(t); },
+    printErr: function (t) { console.warn(t); },
+    onPorchTap: function (i) {
+      porchChosen = i;
+      refresh();
+    },
+    onGameReady: function () {
+      call = {
+        pointer: api('pumpkin_pointer', null, ['number', 'number', 'number', 'number']),
+        stamp: api('pumpkin_stamp', null, ['number']),
+        edit: api('pumpkin_edit', null, ['number']),
+        undo: api('pumpkin_undo'),
+        startOver: api('pumpkin_start_over'),
+        variety: api('pumpkin_variety', null, ['number']),
+        dark: api('pumpkin_dark', null, ['number']),
+        layout: api('pumpkin_layout', null, ['number', 'number', 'number', 'number']),
+        mode: api('pumpkin_mode', null, ['number']),
+        load: api('pumpkin_load', 'number', ['string']),
+        code: api('pumpkin_code', 'string'),
+        porch: api('pumpkin_porch', 'number', ['string']),
+        porchChoose: api('pumpkin_porch_choose', null, ['number']),
+        snapshot: api('pumpkin_snapshot', 'number'),
+        shotW: api('pumpkin_snapshot_width', 'number'),
+        shotH: api('pumpkin_snapshot_height', 'number'),
+        shapeCount: api('pumpkin_shape_count', 'number'),
+        shapePart: api('pumpkin_shape_part', 'number', ['number']),
+        shapeSvg: api('pumpkin_shape_svg', 'string', ['number']),
+        screenOf: api('pumpkin_screen_of', 'string', ['number', 'number']),
+        status: api('pumpkin_status', 'string')
+      };
+      window.pumpkin = call;  // for the smoke test and the curious
+      window.pumpkinPage = { porchList: porchList, putOnPorch: putOnPorch, showPorch: showPorch, showCarve: showCarve,
+                             savePicture: savePicture, link: link, refresh: refresh };
+      ready = true;
+      buildTray();
+      buildKinds();
+      wire();
+      sizeCanvas();
+      loadHash();  // before the first refresh, which writes the address
+      refresh();
+      StrataBoot.ready();
+    },
+    onRendererFailed: function (why) {
+      StrataLoader.fallback('engine', 'Pumpkin needs WebGL 2, which this browser did not provide (' + why + ').');
+    },
+    onAbort: function (what) {
+      $('loading').style.display = 'block';
+      $('loading').textContent = 'Pumpkin stopped: ' + what;
+    }
+  };
+})();
+</script>
+<!-- emcc's script tag, kept inert: web/strata-boot.js starts it behind the
+     loading shell. data-bytes is the download's size, stamped by the build. -->
+<template id="strata-glue" data-bytes="0">{{{ SCRIPT }}}</template>
+<!-- The loading shell, vendored from Strata, and its bridge to this build; the
+     build puts both inline (web/strata_page.cmake). -->
+<script src="strata-kit/strata-loader.js"></script>
+<script src="strata-boot.js"></script>
+<script>
+  StrataBoot.start({
+    wasm: 'pumpkin.wasm',
+    title: 'Pumpkin',
+    fallback: { href: 'https://danielstephenson.dev/play', text: 'More games' },
+    canvas: document.getElementById('canvas')
+  }).catch(function () {});  // the loading shell already shows why
+</script>
+</body>
+</html>
