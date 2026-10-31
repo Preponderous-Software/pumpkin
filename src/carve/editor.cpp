@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "carve/pumpkin.h"
 #include "carve/shapes.h"
 
 namespace pumpkin {
@@ -52,6 +53,9 @@ void Editor::addStamp(Shape shape) {
     case Part::Mouth: s.at = {0, -0.38f}; break;
     default: s.at = {0, 0.5f}; break;
     }
+    // Where a face goes depends on how tall the pumpkin is (the places
+    // above are for a round one), so a squat pumpkin's mouth stays on its face.
+    if (partOf(shape) != Part::Eye || s.at.x < 0) s.at.y *= lookOf(carving_.variety).height / lookOf(OrangeRound).height;
     // Not exactly on top of a piece already there.
     for (int tries = 0; tries < 6; ++tries) {
         bool clash = false;
