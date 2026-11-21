@@ -94,6 +94,14 @@ bool strokeToCut(const std::vector<Vec2>& stroke, Cut& out);
 // ---------------------------------------------------------------- links
 // A carving as a short URL-safe code (base64url, no padding), and back.
 // decode() refuses anything malformed and leaves `out` untouched then.
+//
+// The code is also what the porch keeps in the browser (localStorage
+// 'pumpkin-porch-v1', a JSON list of codes) and what a shared #p= link holds,
+// so it is the toy's save format. Its first byte is kCodeVersion. A change to
+// the code's layout raises kCodeVersion and keeps decoding every earlier
+// version: tests/test_saves.cpp loads each frozen tests/fixtures/v<N>-*.save.
+constexpr uint8_t kCodeVersion = 1;
+
 std::string encode(const Carving& c);
 bool decode(const std::string& code, Carving& out);
 

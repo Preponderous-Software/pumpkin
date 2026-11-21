@@ -86,8 +86,6 @@ int b64val(char c) {
     return -1;
 }
 
-constexpr uint8_t kVersion = 1;
-
 }  // namespace
 
 bool Carving::operator==(const Carving& o) const {
@@ -147,7 +145,7 @@ bool strokeToCut(const std::vector<Vec2>& stroke, Cut& out) {
 
 std::string encode(const Carving& c) {
     std::vector<uint8_t> b;
-    b.push_back(kVersion);
+    b.push_back(kCodeVersion);
     b.push_back(static_cast<uint8_t>(c.variety));
     size_t n = 0;
     for (const Op& op : c.ops) {
@@ -200,7 +198,7 @@ bool decode(const std::string& code, Carving& out) {
             b.push_back(static_cast<uint8_t>((acc >> bits) & 0xFF));
         }
     }
-    if (b.size() < 2 || b[0] != kVersion || b[1] >= VarietyCount) return false;
+    if (b.size() < 2 || b[0] != kCodeVersion || b[1] >= VarietyCount) return false;
     Carving c;
     c.variety = static_cast<Variety>(b[1]);
     size_t i = 2;
