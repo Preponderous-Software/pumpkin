@@ -58,6 +58,27 @@ if(PUMPKIN_BUILD_TESTS)
     pumpkin_warnings(test_${t})
     add_test(NAME ${t} COMMAND test_${t})
   endforeach()
+
+  # Saves: the porch and #p= links are carving codes; every frozen fixture of
+  # every code version must still load (tests/fixtures/README.md). Under
+  # Emscripten the test reads the fixtures through Node's file system.
+  add_executable(test_saves tests/test_saves.cpp)
+  target_link_libraries(test_saves PRIVATE pumpkin_carve)
+  target_include_directories(test_saves PRIVATE tests)
+  target_compile_definitions(test_saves PRIVATE
+    PUMPKIN_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures"
+    PUMPKIN_SHELL="${CMAKE_CURRENT_SOURCE_DIR}/web/shell.html")
+  pumpkin_warnings(test_saves)
+  add_test(NAME saves COMMAND test_saves)
+
+  # Writes a new code version's fixture (never an old one's).
+  add_executable(make_save_fixtures tools/make_save_fixtures.cpp)
+  target_link_libraries(make_save_fixtures PRIVATE pumpkin_carve)
+  pumpkin_warnings(make_save_fixtures)
+  if(EMSCRIPTEN)
+    target_link_options(test_saves PRIVATE -sNODERAWFS=1)
+    target_link_options(make_save_fixtures PRIVATE -sNODERAWFS=1)
+  endif()
 endif()
 
 # ---------------------------------------------------------------- the toy on Strata

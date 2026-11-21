@@ -62,6 +62,17 @@ emcmake cmake -S . -B build-web -DPUMPKIN_WEB=ON && cmake --build build-web
 `web/smoke/smoke.cjs` plays the page in headless Chromium on a desktop and an iPhone 13 profile; CI runs
 it on every pull request, and a push to `main` deploys the page to the arcade.
 
+## Releases
+
+A release is a bare version tag (`0.1.0`, no `v`) that matches `project(... VERSION ...)` in
+`CMakeLists.txt`. Pushing one makes `.github/workflows/release.yml` build the browser game and
+attach `Pumpkin-<version>-web.zip` (the page, its `.js` and `.wasm`, and the licences) and its
+`.sha256` to the GitHub release. The arcade still deploys every push to `main`; a release does not
+change what it serves.
+
+The porch and `#p=` links hold carving codes, so the code is Pumpkin's save format. Every code
+version has a frozen fixture that the tests load: see [tests/fixtures/README.md](tests/fixtures/README.md).
+
 ## Licence
 
 MIT; see [LICENSE](LICENSE). Strata's loading shell in `web/strata-kit/` is vendored under its own MIT
